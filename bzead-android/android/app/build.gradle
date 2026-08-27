@@ -28,10 +28,10 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("bzead-release.jks")
-            storePassword "Bzead@2025!"
+            storeFile file("bzead-release.keystore")
+            storePassword "bzead2026"
             keyAlias "bzead"
-            keyPassword "Bzead@2025!"
+            keyPassword "bzead2026"
         }
     }
     buildTypes {
