@@ -56,20 +56,27 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Location -->
+    <!-- Location (used for shipping-address prefill at checkout) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- Push notifications -->
+    <!-- Push notifications (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Camera / storage (needed for product image upload flows in buyer profile) -->
-    <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <!--
+        NOTE on photo/video permissions (Play Store policy compliance):
+        The buyer app only lets users PICK existing images (product reviews,
+        profile avatar, support tickets) via input type=file accept=image/*.
+        On Android 13+ (API 33+) Capacitor's WebView routes this through the
+        system Android Photo Picker, which requires NO permission.
+        On Android 12 and below the system file chooser is used, also without
+        any storage permission.
 
-    <!-- Declare hardware features we use optionally -->
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
+        Therefore READ_MEDIA_IMAGES, READ_MEDIA_VIDEO, READ_EXTERNAL_STORAGE,
+        WRITE_EXTERNAL_STORAGE and CAMERA have all been REMOVED. Google Play's
+        "photo and video permissions" declaration requirement no longer applies.
+    -->
+
+    <!-- Declare hardware features we use optionally (camera not required) -->
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 </manifest>

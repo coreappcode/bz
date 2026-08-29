@@ -1,14 +1,26 @@
-# Android
-android/
-!.vscode/
+# Android — keep source/config tracked, ignore build outputs & secrets.
+android/.gradle/
+android/build/
+android/app/build/
+android/capacitor-cordova-android-plugins/build/
+android/local.properties
+android/captures/
+android/.idea/
+android/*.iml
+android/app/*.iml
+android/app/release/
+android/app/debug/
+
+# Keystore (NEVER commit)
 *.keystore
 *.jks
-
-# Dependencies
-node_modules/
+!bzead-release.keystore
 
 # Build artifacts
 dist/
+
+# Dependencies
+node_modules/
 
 # Logs
 *.log
