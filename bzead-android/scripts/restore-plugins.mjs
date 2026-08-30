@@ -11,8 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PLUGINS_FILE = path.resolve(__dirname, '../android/app/src/main/assets/capacitor.plugins.json');
 
 const CUSTOM_PLUGINS = [
-  { pkg: 'bzead-android', classpath: 'com.bzead.app.BzeadPullToRefreshPlugin' },
-  { pkg: 'bzead-android', classpath: 'com.bzead.app.BzeadBackButtonPlugin' },
+  { pkg: 'bzead-android', classpath: 'com.bzead.buyerapp.BzeadPullToRefreshPlugin' },
+  { pkg: 'bzead-android', classpath: 'com.bzead.buyerapp.BzeadBackButtonPlugin' },
 ];
 
 async function main() {

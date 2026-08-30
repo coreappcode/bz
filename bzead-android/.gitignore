@@ -11,10 +11,14 @@ android/app/*.iml
 android/app/release/
 android/app/debug/
 
-# Keystore (NEVER commit)
+# Keystores and signing certs (NEVER commit private signing material)
 *.keystore
 *.jks
-!bzead-release.keystore
+*.pem
+# Also keep any stale/old google-services files out of the repo.
+android/app/google-services.OLD-*.json
+android/app/google-services.json
+!android/app/google-services.json.example
 
 # Build artifacts
 dist/

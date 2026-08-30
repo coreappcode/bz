@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.bzead.app',
+  appId: 'com.bzead.buyerapp',
   appName: 'Bzead',
   webDir: '../Bzeadstore-main/dist-buyer',
   bundledWebRuntime: false,

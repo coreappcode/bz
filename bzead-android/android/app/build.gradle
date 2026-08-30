@@ -1,8 +1,7 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.google.gms.google-services'
 
 android {
-    namespace = "com.bzead.app"
+    namespace = "com.bzead.buyerapp"
     compileSdk = rootProject.ext.compileSdkVersion
 
     buildFeatures {
@@ -10,11 +9,11 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.bzead.app"
+        applicationId "com.bzead.buyerapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "1.0.3"
+        versionCode 1
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
         // OneSignal App ID is injected from environment at build time.
@@ -28,10 +27,10 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file("bzead-release.keystore")
-            storePassword "bzead2026"
-            keyAlias "bzead"
-            keyPassword "bzead2026"
+            storeFile file("bzead-upload.jks")
+            storePassword "Bzead@2025!"
+            keyAlias "bzead-buyerapp"
+            keyPassword "Bzead@2025!"
         }
     }
     buildTypes {
@@ -77,10 +76,17 @@ dependencies {
 
 apply from: 'capacitor.build.gradle'
 
+// Apply google-services plugin ONLY if a real google-services.json is present.
+// The placeholder file ships a `package_name=com.bzead.app` which would conflict
+// with the new applicationId `com.bzead.buyerapp`. Once you add a NEW
+// google-services.json from Firebase (with package_name=com.bzead.buyerapp),
+// this block will re-enable the plugin and Firebase/OneSignal push will work.
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
+    if (servicesJSON.text && servicesJSON.text.contains('com.bzead.buyerapp')) {
         apply plugin: 'com.google.gms.google-services'
+    } else {
+        logger.warn("google-services.json does not contain package_name=com.bzead.buyerapp — google-services plugin NOT applied. Firebase/OneSignal push will be disabled. Replace google-services.json with the one from Firebase Console for the new package.")
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")

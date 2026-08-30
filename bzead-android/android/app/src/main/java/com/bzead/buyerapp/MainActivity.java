@@ -1,4 +1,4 @@
-package com.bzead.app;
+package com.bzead.buyerapp;
 
 import android.app.Dialog;
 import android.os.Bundle;

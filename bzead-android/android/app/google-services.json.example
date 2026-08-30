@@ -1,0 +1,30 @@
+{
+  "_comment": "This is a TEMPLATE. Download the real google-services.json from Firebase Console for package_name=com.bzead.buyerapp and place it at bzead-android/android/app/google-services.json (NOT this file). Steps: 1) Go to https://console.firebase.google.com/project/bzead-58220 2) Add a new Android app with package name 'com.bzead.buyerapp' and SHA-1 of your upload key (F6:43:B1:17:B1:28:25:34:8B:1D:DE:1B:02:03:1A:AE:11:F0:5C:44 from /home/z/my-project/download/bzead-upload.jks). 3) Download google-services.json. 4) Place at bzead-android/android/app/google-services.json. 5) Rebuild. Without this, the build will still succeed but Firebase/OneSignal push notifications will be disabled at runtime.",
+  "project_info": {
+    "project_number": "259470153416",
+    "project_id": "bzead-58220",
+    "storage_bucket": "bzead-58220.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "REPLACE_WITH_REAL_APP_ID_FROM_FIREBASE",
+        "android_client_info": {
+          "package_name": "com.bzead.buyerapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_REAL_API_KEY_FROM_FIREBASE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

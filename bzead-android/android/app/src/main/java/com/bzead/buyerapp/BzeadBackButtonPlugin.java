@@ -1,4 +1,4 @@
-package com.bzead.app;
+package com.bzead.buyerapp;
 
 import com.getcapacitor.Plugin;
 import com.getcapacitor.annotation.CapacitorPlugin;

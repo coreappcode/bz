@@ -1,4 +1,4 @@
-package com.bzead.app;
+package com.bzead.buyerapp;
 
 import android.graphics.Color;
 import android.view.View;
