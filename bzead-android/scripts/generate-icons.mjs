@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generate Android adaptive + legacy launcher icons and splash screens
- * directly from /appicon (1).png 1:1 with NO trim, NO fit-cover distortion.
+ * directly from /logo.png 1:1 with NO trim, NO fit-cover distortion.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
@@ -11,7 +11,7 @@ import sharp from 'sharp';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const SOURCE = path.join(ROOT, 'appicon (1).png');
+const SOURCE = path.join(ROOT, 'logo.png');
 const RES_DIR = path.join(ROOT, 'bzead-android/android/app/src/main/res');
 
 const DENSITIES = {
@@ -32,7 +32,7 @@ const FOREGROUND_DENSITIES = {
 
 const PLAY_STORE = { size: 512, out: path.join(ROOT, 'bzead-android/android/app/src/main/play-store-icon.png') };
 
-const YELLOW_BG = '#f8d848';
+const SPLASH_BACKGROUND = '#ffffff';
 
 const SPLASH_PORTRAIT = {
   mdpi: { w: 320, h: 480 },
@@ -55,7 +55,7 @@ async function ensureDir(dir) {
 }
 
 async function generateLauncherIcons() {
-  // Use appicon (1).png directly without trim or cover distortion
+  // Use logo.png directly without trim or cover distortion
   const iconBuffer = await sharp(SOURCE).toBuffer();
 
   for (const [density, size] of Object.entries(DENSITIES)) {
@@ -93,12 +93,12 @@ async function generateLauncherIcons() {
     .png()
     .toFile(PLAY_STORE.out);
 
-  console.log('✅ Launcher icons generated cleanly (1:1 from appicon (1).png)');
+  console.log('✅ Launcher icons generated cleanly (1:1 from logo.png)');
 }
 
-async function yellowCanvasBuffer(w, h) {
+async function splashCanvasBuffer(w, h) {
   return sharp({
-    create: { width: w, height: h, channels: 4, background: YELLOW_BG },
+    create: { width: w, height: h, channels: 4, background: SPLASH_BACKGROUND },
   }).png().toBuffer();
 }
 
@@ -109,7 +109,7 @@ async function generateSplashSet(densityMap) {
       const dir = path.join(RES_DIR, dirName);
       await ensureDir(dir);
 
-      const background = await yellowCanvasBuffer(w, h);
+      const background = await splashCanvasBuffer(w, h);
       const logoSize = Math.round(Math.min(w, h) * 0.55);
       const logo = await sharp(iconBuffer)
         .resize(logoSize, logoSize, { fit: 'contain' })
@@ -129,7 +129,7 @@ async function generateSplashLandscape() {
     const dir = path.join(RES_DIR, `drawable-land-${density}`);
     await ensureDir(dir);
 
-    const background = await yellowCanvasBuffer(w, h);
+    const background = await splashCanvasBuffer(w, h);
     const logoSize = Math.round(Math.min(w, h) * 0.55);
     const logo = await sharp(iconBuffer)
       .resize(logoSize, logoSize, { fit: 'contain' })
@@ -153,21 +153,21 @@ async function generateSplashIcon() {
     .resize(safeZone, safeZone, { fit: 'contain' })
     .toBuffer();
 
-  const background = await yellowCanvasBuffer(canvas, canvas);
+  const background = await splashCanvasBuffer(canvas, canvas);
 
   await sharp(background)
     .composite([{ input: logo, gravity: 'center' }])
     .png()
     .toFile(path.join(dir, 'splash.png'));
 
-  console.log('✅ Android 12+ splash icon generated (yellow background)');
+  console.log('✅ Android 12+ splash icon generated (white background)');
 }
 
 async function generateSplash() {
   await generateSplashSet(SPLASH_PORTRAIT);
   await generateSplashLandscape();
   await generateSplashIcon();
-  console.log('✅ Splash screens generated (yellow background)');
+  console.log('✅ Splash screens generated (white background)');
 }
 
 async function generateAdaptiveXml() {
