@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# iOS native build outputs (web assets are rebuilt at build time — same
+# convention as bzead-android, which commits no bundled assets either)
+ios/App/output/
+ios/App/public/
+ios/DerivedData/
+*.ipa
+*.xcarchive
+*.zip

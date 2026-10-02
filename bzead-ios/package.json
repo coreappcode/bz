@@ -1,0 +1,34 @@
+{
+  "name": "bzead-ios",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "sync": "npx cap sync ios",
+    "build:web": "cd ../Bzeadstore-main && npm run build:buyer && cd ../bzead-ios && node scripts/prepare-assets.mjs",
+    "copy": "node scripts/prepare-assets.mjs && npx cap copy ios",
+    "open:ios": "npx cap open ios",
+    "build:debug": "node scripts/build-ios.mjs debug",
+    "build:simulator": "node scripts/build-ios.mjs simulator",
+    "build:device": "node scripts/build-ios.mjs device",
+    "assets": "node scripts/generate-ios-assets.mjs"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.0.0",
+    "@capacitor/browser": "^8.0.3",
+    "@capacitor/core": "^8.0.0",
+    "@capacitor/dialog": "^8.0.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/share": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.0",
+    "@capacitor/status-bar": "^8.0.0",
+    "onesignal-cordova-plugin": "^5.2.13"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.0.0",
+    "sharp": "^0.33.5",
+    "typescript": "^5.6.0"
+  }
+}

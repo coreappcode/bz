@@ -1,0 +1,84 @@
+# Bzead iOS (Capacitor) — Debug build CI
+#
+# Produces two downloadable artifacts on every run:
+#   1. bzead-ios-simulator-debug   — zipped .app, drag onto iOS Simulator
+#   2. bzead-ios-device-debug-ipa  — unsigned .ipa, sign with a free Apple ID
+#                                     via Sideloadly/AltStore, or install
+#                                     through Xcode for real-device testing
+#
+# Mirrors bzead-android's flow: rebuilds the buyer-only web bundle from
+# Bzeadstore-main (with real env values from repo secrets) and syncs it into
+# the native iOS project before compiling.
+#
+# Trigger: manual (Actions → Run workflow) or pushes touching bzead-ios/.
+
+name: iOS Capacitor Debug Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - bzead-ios/**
+      - Bzeadstore-main/**
+      - .github/workflows/ios-capacitor-debug.yml
+
+jobs:
+  build-debug:
+    runs-on: macos-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Write Bzeadstore-main/.env from repo secrets
+        working-directory: Bzeadstore-main
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          PUBLIC_APP_URL: ${{ secrets.PUBLIC_APP_URL }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          ONESIGNAL_APP_ID: ${{ secrets.ONESIGNAL_APP_ID }}
+        run: |
+          URL="${SUPABASE_URL:-https://aiiefgjfftmerayihpbv.supabase.co}"
+          PUBLIC="${PUBLIC_APP_URL:-https://www.bzead.com}"
+          {
+            echo "VITE_SUPABASE_URL=${URL}"
+            echo "VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}"
+            echo "VITE_DOMAIN=${PUBLIC}"
+            echo "VITE_PUBLIC_APP_URL=${PUBLIC}"
+            echo "VITE_ENVIRONMENT=production"
+            echo "VITE_STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}"
+            echo "VITE_ONESIGNAL_APP_ID=${ONESIGNAL_APP_ID:-02f9a15b-ca1c-4ab2-8404-8a8cdb9afef9}"
+          } > .env
+          echo "✅ .env written (anon key present: $([ -n "${SUPABASE_ANON_KEY}" ] && echo yes || echo NO))"
+
+      - name: Install web app dependencies
+        working-directory: Bzeadstore-main
+        run: npm ci
+
+      - name: Install iOS wrapper dependencies
+        working-directory: bzead-ios
+        run: npm ci
+
+      - name: Build web + sync + compile (simulator .app + device .ipa)
+        working-directory: bzead-ios
+        run: node scripts/build-ios.mjs debug
+
+      - name: Upload simulator debug app
+        uses: actions/upload-artifact@v4
+        with:
+          name: bzead-ios-simulator-debug
+          path: bzead-ios/ios/App/output/bzead-ios-simulator-debug.zip
+          if-no-files-found: error
+
+      - name: Upload device debug ipa (unsigned)
+        uses: actions/upload-artifact@v4
+        with:
+          name: bzead-ios-device-debug-ipa
+          path: bzead-ios/ios/App/output/bzead-ios-device-debug-unsigned.ipa
+          if-no-files-found: error
