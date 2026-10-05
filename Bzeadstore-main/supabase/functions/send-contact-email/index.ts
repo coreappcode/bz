@@ -1,5 +1,9 @@
 // @ts-nocheck
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+
+declare const Deno: {
+  env: { get: (name: string) => string | undefined };
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+};
 
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
@@ -50,15 +54,12 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: 'Method not allowed' }, { status: 405 });
   }
 
-  const smtpHost = Deno.env.get('MSG91_SMTP_HOST')?.trim() || 'smtp.mailer91.com';
-  const smtpPort = Number(Deno.env.get('MSG91_SMTP_PORT')?.trim() || '587');
-  const smtpUser = Deno.env.get('MSG91_SMTP_USER')?.trim();
-  const smtpPass = Deno.env.get('MSG91_SMTP_PASSWORD')?.trim();
-  const fromEmail = Deno.env.get('CONTACT_FROM_EMAIL')?.trim() || Deno.env.get('MSG91_FROM_EMAIL')?.trim() || 'no-reply@mail.bzead.com';
+  const resendKey = Deno.env.get('RESEND_API_KEY')?.trim();
+  const fromEmail = Deno.env.get('CONTACT_FROM_EMAIL')?.trim() || Deno.env.get('RESEND_FROM_EMAIL')?.trim() || 'no-reply@mail.bzead.com';
   const toEmail = Deno.env.get('CONTACT_TO_EMAIL')?.trim() || 'info@bzead.com';
 
-  if (!smtpUser || !smtpPass) {
-    return json({ ok: false, error: 'Missing MSG91 SMTP credentials (MSG91_SMTP_USER / MSG91_SMTP_PASSWORD)' }, { status: 500 });
+  if (!resendKey) {
+    return json({ ok: false, error: 'RESEND_API_KEY not configured' }, { status: 500 });
   }
 
   let payload: { name?: string; email?: string; message?: string };
@@ -107,32 +108,35 @@ Deno.serve(async (req) => {
     <p style="white-space:pre-line;">${message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>
   `;
 
-  const client = new SMTPClient({
-    connection: {
-      hostname: smtpHost,
-      port: smtpPort,
-      tls: smtpPort === 465,
-      auth: { username: smtpUser, password: smtpPass },
-    },
-    debug: { log: false },
-  });
-
   try {
-    await client.send({
-      from: `BZEAD Contact <${fromEmail}>`,
-      to: [toEmail],
-      replyTo: email,
-      subject,
-      content: text,
-      html,
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `BZEAD Contact <${fromEmail}>`,
+        to: [toEmail],
+        reply_to: email,
+        subject,
+        text,
+        html,
+      }),
     });
+
+    if (!resp.ok) {
+      const bodyText = await resp.text();
+      const errorMsg = `Resend ${resp.status}: ${bodyText.slice(0, 300)}`;
+      console.error('[send-contact-email] Resend error:', errorMsg);
+      return json({ ok: false, error: errorMsg }, { status: 502 });
+    }
+
+    const data = await resp.json().catch(() => null);
+    return json({ ok: true, id: data?.id || `resend-${Date.now()}` });
   } catch (err: any) {
-    try { await client.close(); } catch { /* noop */ }
-    const errorMsg = (err && err.message) ? String(err.message).slice(0, 300) : 'Failed to send email via MSG91 SMTP';
-    console.error('[send-contact-email] SMTP error:', errorMsg);
+    const errorMsg = (err && err.message) ? String(err.message).slice(0, 300) : 'Failed to send email via Resend';
+    console.error('[send-contact-email] Resend error:', errorMsg);
     return json({ ok: false, error: errorMsg }, { status: 502 });
   }
-
-  try { await client.close(); } catch { /* noop */ }
-  return json({ ok: true, id: `msg91-${Date.now()}` });
 });

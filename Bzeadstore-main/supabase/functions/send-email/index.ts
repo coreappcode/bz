@@ -6,8 +6,6 @@ declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
 };
 
-import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
-
 // ─── Constants ─────────────────────────────────────────────────
 
 const ALLOWED_ORIGINS = [
@@ -24,13 +22,13 @@ const ALLOWED_ORIGINS = [
 ];
 
 const SENDER_NAME = 'BZEAD';
-const SENDER_EMAIL = (Deno.env.get('MSG91_FROM_EMAIL')?.trim() || 'no-reply@mail.bzead.com');
-const DEFAULT_REPLY_TO = (Deno.env.get('MSG91_REPLY_TO')?.trim() || 'support@bzead.com');
+const SENDER_EMAIL = (Deno.env.get('RESEND_FROM_EMAIL')?.trim() || 'no-reply@mail.bzead.com');
+const DEFAULT_REPLY_TO = (Deno.env.get('RESEND_REPLY_TO')?.trim() || 'support@bzead.com');
 
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 500; // exponential backoff base
-const RATE_LIMIT_PER_MINUTE = 20;
-const RATE_LIMIT_INTERVAL_MS = Math.ceil(60_000 / RATE_LIMIT_PER_MINUTE); // 3000ms between emails
+const RATE_LIMIT_PER_MINUTE = 240; // 4/sec — well under Resend's 10 req/s limit
+const RATE_LIMIT_INTERVAL_MS = Math.ceil(60_000 / RATE_LIMIT_PER_MINUTE); // 250ms between emails
 
 // ─── Supabase REST Helpers ─────────────────────────────────────
 
@@ -113,7 +111,7 @@ async function logEmailEvent(
 
 /**
  * Handle email failure: log as failed, trigger in-app notification.
- * Does NOT retry with another provider — MSG91 SMTP only.
+ * Does NOT retry with another provider — Resend API only.
  */
 async function handleEmailFailure(
   orderId: string,
@@ -745,34 +743,17 @@ function buildEmail(
   return { subject, html };
 }
 
-// ─── MSG91 SMTP SendEmail (with retry) ────────────────────────
+// ─── Resend API SendEmail (with retry) ────────────────────────
 
-// Hard cap on a single SMTP send. denomailer STARTTLS (port 587) can hang in the
-// Supabase Edge (Deno) runtime, which kills the worker with a 503 *before* the
-// failure can be logged. Racing against a timeout turns a hang into a catchable,
-// loggable error so the email pipeline never silently dies.
-const SMTP_SEND_TIMEOUT_MS = 20_000;
+// Hard cap on a single Resend API call so a hung request can never kill the
+// worker with a 503 before the failure is logged.
+const RESEND_TIMEOUT_MS = 20_000;
 
-function getSmtpClient(): SMTPClient | null {
-  const host = Deno.env.get('MSG91_SMTP_HOST')?.trim() || 'smtp.mailer91.com';
-  // Default to 465 (implicit TLS). Port 587 STARTTLS hangs denomailer in the edge runtime.
-  const port = Number(Deno.env.get('MSG91_SMTP_PORT')?.trim() || '465');
-  const username = Deno.env.get('MSG91_SMTP_USER')?.trim();
-  const password = Deno.env.get('MSG91_SMTP_PASSWORD')?.trim();
-  if (!username || !password) return null;
-
-  return new SMTPClient({
-    connection: {
-      hostname: host,
-      port,
-      tls: port === 465,
-      auth: { username, password },
-    },
-    debug: { log: false },
-  });
+function resendApiKey(): string {
+  return Deno.env.get('RESEND_API_KEY')?.trim() || '';
 }
 
-async function sendViaMsg91Smtp(
+async function sendViaResend(
   to: string | string[],
   subject: string,
   html: string,
@@ -780,19 +761,35 @@ async function sendViaMsg91Smtp(
   replyTo?: string,
   attachments?: Array<{ filename: string; base64: string; contentType?: string }>,
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
-  const client = getSmtpClient();
-  if (!client) {
-    return { success: false, error: 'MSG91 SMTP credentials not configured (MSG91_SMTP_USER / MSG91_SMTP_PASSWORD)' };
+  const apiKey = resendApiKey();
+  if (!apiKey) {
+    return { success: false, error: 'Resend API key not configured (RESEND_API_KEY)' };
   }
 
   const recipients = Array.isArray(to) ? to : [to];
   const finalReplyTo = replyTo || DEFAULT_REPLY_TO;
 
-  // Strip trailing whitespace + collapse blank lines. Whitespace-only indentation
-  // lines in the HTML template get quoted-printable encoded as "=20" by the SMTP
-  // transport, which some mail clients render literally. Removing them eliminates
-  // the stray "=20" without changing how the email renders (HTML ignores it anyway).
+  // Strip trailing whitespace + collapse blank lines (kept from the SMTP era —
+  // harmless for the HTTP API and keeps output identical to what was tested).
   const cleanHtml = html.replace(/[ \t]+$/gm, '').replace(/\n{2,}/g, '\n');
+
+  const payload: Record<string, unknown> = {
+    from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+    to: recipients,
+    subject,
+    html: cleanHtml,
+    text: text || 'This email requires an HTML-capable client.',
+  };
+  if (finalReplyTo) {
+    payload.reply_to = finalReplyTo;
+  }
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map((a) => ({
+      filename: a.filename,
+      content: a.base64, // Resend expects base64-encoded content
+      content_type: a.contentType || 'application/pdf',
+    }));
+  }
 
   // Retry loop with exponential backoff
   let lastError = '';
@@ -804,47 +801,43 @@ async function sendViaMsg91Smtp(
     }
 
     try {
-      await Promise.race([
-        client.send({
-          from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
-          to: recipients,
-          replyTo: finalReplyTo,
-          subject,
-          content: text || 'This email requires an HTML-capable client.',
-          html: cleanHtml,
-          ...(attachments && attachments.length > 0
-            ? {
-                attachments: attachments.map((a) => ({
-                  filename: a.filename,
-                  content: a.base64,
-                  encoding: 'base64' as const,
-                  contentType: a.contentType || 'application/pdf',
-                })),
-              }
-            : {}),
+      const resp: Response = await Promise.race([
+        fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
         }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error(`SMTP send timed out after ${SMTP_SEND_TIMEOUT_MS}ms`)), SMTP_SEND_TIMEOUT_MS),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Resend request timed out after ${RESEND_TIMEOUT_MS}ms`)), RESEND_TIMEOUT_MS),
         ),
       ]);
-      // denomailer doesn't return a message-id; synthesize one for logs
-      const messageId = `msg91-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-      console.info(`[send-email] Sent to ${recipients.join(',')} | Subject: ${subject.slice(0, 60)} | MessageId: ${messageId}`);
-      try { await client.close(); } catch { /* noop */ }
-      return { success: true, messageId };
-    } catch (err: any) {
-      lastError = (err && err.message) ? String(err.message).slice(0, 300) : String(err).slice(0, 300);
-      // Heuristic: don't retry on auth failures
-      if (/auth/i.test(lastError) && /(fail|invalid|denied)/i.test(lastError)) {
-        console.error('[send-email] Non-retryable SMTP auth error:', lastError);
-        try { await client.close(); } catch { /* noop */ }
+
+      const bodyText = await resp.text();
+      let bodyObj: { id?: string } | null = null;
+      try { bodyObj = JSON.parse(bodyText); } catch { /* non-JSON body */ }
+
+      if (resp.ok) {
+        const messageId = bodyObj?.id ? String(bodyObj.id) : `resend-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        console.info(`[send-email] Sent to ${recipients.join(',')} | Subject: ${subject.slice(0, 60)} | MessageId: ${messageId}`);
+        return { success: true, messageId };
+      }
+
+      lastError = `Resend ${resp.status}: ${bodyText.slice(0, 300)}`;
+      // Don't retry on auth/validation errors — they will never succeed
+      if (resp.status === 400 || resp.status === 401 || resp.status === 403 || resp.status === 422) {
+        console.error('[send-email] Non-retryable Resend error:', lastError);
         return { success: false, error: lastError };
       }
-      console.warn(`[send-email] Retryable SMTP error (attempt ${attempt}):`, lastError);
+      console.warn(`[send-email] Retryable Resend error (attempt ${attempt}):`, lastError);
+    } catch (err: any) {
+      lastError = (err && err.message) ? String(err.message).slice(0, 300) : String(err).slice(0, 300);
+      console.warn(`[send-email] Retryable Resend error (attempt ${attempt}):`, lastError);
     }
   }
 
-  try { await client.close(); } catch { /* noop */ }
   console.error(`[send-email] Failed after ${MAX_RETRIES} retries:`, lastError);
   return { success: false, error: `Failed after ${MAX_RETRIES} retries: ${lastError}` };
 }
@@ -900,8 +893,8 @@ async function processQueue(queue: QueueItem[]): Promise<{ sent: number; failed:
       await new Promise(r => setTimeout(r, RATE_LIMIT_INTERVAL_MS));
     }
 
-    // ── Send via MSG91 SMTP ──
-    const result = await sendViaMsg91Smtp(item.to, item.subject, item.html, item.text, undefined, item.attachments);
+    // ── Send via Resend API ──
+    const result = await sendViaResend(item.to, item.subject, item.html, item.text, undefined, item.attachments);
 
     if (result.success) {
       if (item.orderId && item.eventType && item.recipientType) {
@@ -913,7 +906,7 @@ async function processQueue(queue: QueueItem[]): Promise<{ sent: number; failed:
       if (item.orderId && item.eventType && item.recipientType) {
         await handleEmailFailure(
           item.orderId, item.eventType, item.recipientType, primaryEmail,
-          result.error || 'Unknown MSG91 SMTP error', item.recipientUserId,
+          result.error || 'Unknown Resend API error', item.recipientUserId,
         );
       }
       results.push({ to: item.to, success: false, status: 'failed', error: result.error });
@@ -1038,7 +1031,7 @@ Deno.serve(async (req: Request) => {
       return json({ error: 'HTML body too large (max 200 KB)' }, { status: 400, _origin: allowedOrigin } as any);
     }
 
-    const result = await sendViaMsg91Smtp(to, subject, html, text, replyTo);
+    const result = await sendViaResend(to, subject, html, text, replyTo);
 
     if (!result.success) {
       return json({ error: result.error }, { status: 502, _origin: allowedOrigin } as any);
