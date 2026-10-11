@@ -12,13 +12,11 @@ android {
         applicationId "com.bzead.buyerapp"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
-        // OneSignal App ID is injected from environment at build time.
-        // Set it in your shell or CI: export ONESIGNAL_APP_ID=xxxx
-        buildConfigField "String", "ONESIGNAL_APP_ID", "\"${System.getenv('ONESIGNAL_APP_ID') ?: 'null'}\""
+        // Firebase Cloud Messaging is configured via google-services.json.
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61

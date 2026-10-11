@@ -11,13 +11,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import com.getcapacitor.BridgeActivity;
-import com.onesignal.Continue;
-import com.onesignal.OneSignal;
-import com.onesignal.debug.LogLevel;
 
 public class MainActivity extends BridgeActivity {
-
-    private static final String ONESIGNAL_APP_ID = BuildConfig.ONESIGNAL_APP_ID;
 
     // Tracks the currently visible Stripe 3DS/bank-auth challenge dialog, if any.
     private Dialog challengeDialog;
@@ -90,8 +85,6 @@ public class MainActivity extends BridgeActivity {
                 return true;
             }
         });
-
-        initOneSignal();
     }
 
     private void dismissChallengeDialog() {
@@ -101,14 +94,5 @@ public class MainActivity extends BridgeActivity {
             }
             challengeDialog = null;
         }
-    }
-
-    private void initOneSignal() {
-        if (ONESIGNAL_APP_ID == null || ONESIGNAL_APP_ID.isEmpty() || "null".equals(ONESIGNAL_APP_ID)) {
-            return;
-        }
-        OneSignal.getDebug().setLogLevel(LogLevel.VERBOSE);
-        OneSignal.initWithContext(this, ONESIGNAL_APP_ID);
-        OneSignal.getNotifications().requestPermission(false, Continue.none());
     }
 }

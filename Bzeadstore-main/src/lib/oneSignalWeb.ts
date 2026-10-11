@@ -44,7 +44,7 @@ let readyPromise: Promise<OneSignalSdk | null> | null = null;
 async function loadSdk(): Promise<OneSignalSdk | null> {
   try {
     const mod = await import('react-onesignal');
-    const sdk = ((mod as { default?: OneSignalSdk }).default
+    const sdk = ((mod as unknown as { default?: OneSignalSdk }).default
       || (mod as unknown as OneSignalSdk)) as OneSignalSdk | undefined;
     return sdk ?? null;
   } catch (error) {
