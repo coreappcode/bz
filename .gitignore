@@ -20,3 +20,4 @@ BZEAD-iOS-main/build/
 supabase/.temp/
 *.xlsx
 .venv_db/
+release/
