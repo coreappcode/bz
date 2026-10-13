@@ -31,12 +31,6 @@ const UserAddressManagement: React.FC = () => {
 
   const editingAddress = editingId ? addresses.find((a) => a.id === editingId) : undefined;
 
-  // Load addresses from User.preferences on mount
-  useEffect(() => {
-    loadAddresses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, currentAuthUser]);
-
   const loadAddresses = async () => {
     try {
       setIsLoading(true);
@@ -72,6 +66,12 @@ const UserAddressManagement: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Load addresses from the database when the active user changes.
+  useEffect(() => {
+    void loadAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, currentAuthUser]);
 
   const handleAddAddress = async (data: Address) => {
     try {
@@ -134,13 +134,17 @@ const UserAddressManagement: React.FC = () => {
       setIsSaving(true);
       setError(null);
 
-      await deleteAddressApi(id);
-      await loadAddresses();
+      const result = await deleteAddressApi(id);
+      if (!result.success) {
+        throw new Error(result.error || 'Address could not be deleted.');
+      }
+
+      setAddresses((current) => current.filter((address) => address.id !== id));
       setSuccessMessage('Address deleted!');
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       logger.error(err as Error, { context: 'Failed to delete address' });
-      setError('Failed to delete address');
+      setError(err instanceof Error ? err.message : 'Failed to delete address');
     } finally {
       setIsSaving(false);
     }
@@ -332,7 +336,8 @@ const UserAddressManagement: React.FC = () => {
 
                   <button
                     onClick={() => setConfirmDeleteId(address.id)}
-                    disabled={address.isDefault || addresses.length === 1 || isSaving}
+                    data-no-global-confirm="true"
+                    disabled={isSaving}
                     className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
@@ -382,9 +387,11 @@ const UserAddressManagement: React.FC = () => {
               </button>
               <button
                 onClick={() => { const id = confirmDeleteId; setConfirmDeleteId(null); handleDeleteAddress(id); }}
-                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors"
+                data-no-global-confirm="true"
+                disabled={isSaving}
+                className="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Yes, Delete
+                {isSaving ? 'Deleting...' : 'Yes, Delete'}
               </button>
             </div>
           </div>

@@ -1131,11 +1131,18 @@ export async function updateUserAddress(
 }
 
 export async function deleteUserAddress(addressId: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('user_addresses')
     .delete()
-    .eq('id', addressId);
-  return { success: !error, error: error?.message || null };
+    .eq('id', addressId)
+    .select('id')
+    .maybeSingle();
+
+  const success = Boolean(data?.id) && !error;
+  return {
+    success,
+    error: error?.message || (success ? null : 'Address was not found or could not be deleted.'),
+  };
 }
 
 export async function setDefaultUserAddress(userId: string, addressId: string) {
