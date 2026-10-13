@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Home, Briefcase, MoreHorizontal } from 'lucide-react';
+import { fetchCountries, type Country } from '../lib/shippingDataService';
 
 export interface Address {
   id: string;
@@ -49,7 +50,32 @@ const AddressForm: React.FC<AddressFormProps> = ({
     }
   );
 
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [countriesLoading, setCountriesLoading] = useState(true);
+  const [countriesError, setCountriesError] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    const loadCountries = async () => {
+      try {
+        const { data, error } = await fetchCountries();
+        if (!isCurrent) return;
+        if (error) throw new Error(error);
+        setCountries(data || []);
+      } catch {
+        if (isCurrent) setCountriesError(true);
+      } finally {
+        if (isCurrent) setCountriesLoading(false);
+      }
+    };
+
+    void loadCountries();
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
 
   const requiredFields = [
     'fullName',
@@ -193,20 +219,25 @@ const AddressForm: React.FC<AddressFormProps> = ({
             name="country"
             value={formData.country || ''}
             onChange={handleChange}
+            disabled={countriesLoading}
             className={`w-full px-4 py-3 bg-gray-100 border rounded-lg text-gray-900 focus:outline-none focus:border-amber-500 transition-colors ${
               errors.country ? 'border-red-500' : 'border-gray-200'
             }`}
           >
             <option value="">Select a country</option>
-            <option value="India">India</option>
-            <option value="United Kingdom">United Kingdom</option>
-            <option value="United States">United States</option>
-            <option value="Canada">Canada</option>
-            <option value="Australia">Australia</option>
-            <option value="Germany">Germany</option>
-            <option value="France">France</option>
-            <option value="Japan">Japan</option>
+            {formData.country && !countries.some((country) => country.country_name === formData.country) && (
+              <option value={formData.country}>{formData.country}</option>
+            )}
+            {countries.map((country) => (
+              <option key={country.id} value={country.country_name}>
+                {country.country_name}
+              </option>
+            ))}
           </select>
+          {countriesLoading && <p className="text-gray-500 text-xs mt-1">Loading countries...</p>}
+          {countriesError && (
+            <p className="text-red-500 text-xs mt-1">Unable to load countries. Please refresh and try again.</p>
+          )}
           {errors.country && <p className="text-red-500 text-xs mt-1">{errors.country}</p>}
         </div>
 

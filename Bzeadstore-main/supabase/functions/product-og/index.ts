@@ -30,7 +30,7 @@ async function getIndexHtml(): Promise<string> {
   if (cachedIndexHtml && (now - cacheTimestamp) < INDEX_CACHE_TTL) {
     return cachedIndexHtml;
   }
-  // Fetch the SPA shell from the origin — hits Amplify's static hosting
+  // Fetch the SPA shell from the site's static origin.
   const res = await fetch(`${SITE_URL}/index.html`);
   if (!res.ok) throw new Error(`Failed to fetch index.html: ${res.status}`);
   cachedIndexHtml = await res.text();
@@ -233,7 +233,7 @@ function inferImageMime(url: string): string {
   return 'image/jpeg';
 }
 
-/** WhatsApp/Facebook fetch og:image from Supabase edge function (direct URL — Amplify /og-image proxy is unreliable). */
+/** Use the Supabase edge function URL directly for social previews instead of a host proxy. */
 function resolveSocialImageUrl(slug: string, fallbackImageUrl: string): string {
   const s = String(slug || '').trim();
   if (s && SUPABASE_URL) {

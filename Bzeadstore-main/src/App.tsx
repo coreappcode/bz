@@ -201,7 +201,7 @@ const LegacySectionRedirect: React.FC<{ to: '/products/section/featured' | '/pro
   return <Navigate to={`${to}${location.search}`} replace />;
 };
 
-/** Share link fallback — if the Amplify proxy doesn't intercept, redirect to product page */
+/** Share link fallback — if the host does not intercept this route, redirect to product page */
 const ShareRedirect: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
   return <Navigate to={`/products/${slug}`} replace />;

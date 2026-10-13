@@ -8,6 +8,7 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+build
 dist
 dist-ssr
 *.local
@@ -21,6 +22,7 @@ supabase/.temp/
 .env.local
 .env.production
 .env.*.local
+/cred.md
 
 # Private keys & certificates
 *.pem
@@ -38,28 +40,6 @@ supabase/.temp/
 *.njsproj
 *.sln
 *.sw?
-
-#amplify-do-not-edit-begin
-amplify/\#current-cloud-backend
-amplify/.config/local-*
-amplify/logs
-amplify/mock-data
-amplify/mock-api-resources
-amplify/backend/amplify-meta.json
-amplify/backend/.temp
-build/
-dist/
-node_modules/
-aws-exports.js
-awsconfiguration.json
-amplifyconfiguration.json
-amplifyconfiguration.dart
-amplify-build-config.json
-amplify-gradle-config.json
-amplifytools.xcconfig
-.secret-*
-**.sample
-#amplify-do-not-edit-end
 
 # Android (Capacitor) build artifacts
 android/app/build/

@@ -2,13 +2,6 @@
 
 This guide explains how to deploy the BZEAD web app (in `Bzeadstore-main/`) as a **Cloudflare Worker** with static assets.
 
-## What changed from AWS Amplify
-
-- `amplify.yml` is no longer used.
-- `Bzeadstore-main/wrangler.toml` configures a Cloudflare Worker with a static assets binding.
-- `Bzeadstore-main/worker.js` handles OG-image proxying, product SSR proxying, security headers, static asset caching, and SPA fallback.
-- `Bzeadstore-main/public/_redirects` and `public/_headers` are no longer used by Cloudflare Workers. Their behavior is implemented inside `worker.js`.
-
 ## Project structure
 
 ```

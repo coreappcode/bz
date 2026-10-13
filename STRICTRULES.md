@@ -8,7 +8,7 @@
 - Production code only; never use dummy, mock, placeholder, sample, or fake data.
 - Never break existing working features.
 - Preserve APIs, DB schema, Edge Functions, auth, RLS, and security.
-- Frontend: AWS Amplify.
+- Frontend deployment config: Cloudflare Workers.
 - Backend: Supabase + Edge Functions.
 - Never expose or modify server-side API keys.
 - Change only what is required; avoid unrelated edits.

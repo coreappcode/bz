@@ -187,7 +187,7 @@ These are **native-app-only** fixes — the website was never affected by any of
 ### 7.2 Checkout showed no card-entry fields at all (2026-08-20)
 **Symptom:** After the 3DS fix above, testing revealed the "Payment Method" section showed **only** the Pay Now button — no card number/expiry/CVC fields ever rendered (the website showed them fine).
 
-**Root cause:** the local repo's [`Bzeadstore-main/.env`](Bzeadstore-main/.env) (gitignored, local-only) contained an invalid `VITE_STRIPE_PUBLISHABLE_KEY` (`sb_publishable_...` — not a real Stripe key format; real ones start with `pk_live_`/`pk_test_`). The live website is built by **AWS Amplify**, which injects the real key from Amplify's own environment variable settings — never from this repo's `.env`. Building the Android app locally with this repo's `.env` baked the bogus key into the WebView bundle, so Stripe.js's `PaymentElement` silently failed to render.
+**Root cause:** the local repo's [`Bzeadstore-main/.env`](Bzeadstore-main/.env) (gitignored, local-only) contained an invalid `VITE_STRIPE_PUBLISHABLE_KEY` (`sb_publishable_...` — not a real Stripe key format; real ones start with `pk_live_`/`pk_test_`). The live website receives its build-time key from its deployment environment — never from this repo's `.env`. Building the Android app locally with this repo's `.env` baked the bogus key into the WebView bundle, so Stripe.js's `PaymentElement` silently failed to render.
 
 **Fix:** replaced the key in `.env` with the real `pk_live_...` key (provided by the app owner) before rebuilding. **Anyone rebuilding this app must verify this key is a genuine `pk_live_`/`pk_test_` value — never trust the checked-out `.env` blindly.**
 

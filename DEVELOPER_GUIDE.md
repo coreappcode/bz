@@ -21,7 +21,7 @@ All paths in this document are **relative to the repo root** (`/workspaces/bzead
 | Shipping | Shiprocket (India domestic), Shippo (international) |
 | Push | OneSignal (web + native Android) |
 | Mobile | Native Kotlin buyer app (`BZEAD-APK-main/`) + native SwiftUI buyer app (`BZEAD-iOS-main/`) |
-| Hosting | AWS Amplify (see [amplify.yml](amplify.yml), [customHttp.yml](customHttp.yml)) |
+| Deployment config | Cloudflare Workers ([wrangler.toml](Bzeadstore-main/wrangler.toml), [deploy workflow](.github/workflows/deploy-cloudflare-worker.yml)) |
 
 ### Repo structure (top-level)
 
@@ -461,8 +461,8 @@ Run: `cd Bzeadstore-main && npm test` (Vitest config: [vitest.config.ts](Bzeadst
 * Web build: `npm run build`.
 * Buyer Android: Gradle build in [BZEAD-APK-main](BZEAD-APK-main) (`./gradlew assembleDebug` or `assembleRelease`); upload APK to Supabase `app-downloads`.
 * Buyer iOS: XcodeGen + Xcode in [BZEAD-iOS-main](BZEAD-iOS-main) (see `README.md`); same Supabase/Stripe/OneSignal keys as Android.
-* Web hosting via AWS Amplify ([amplify.yml](amplify.yml)).
-* Security headers in [Bzeadstore-main/public/_headers](Bzeadstore-main/public/_headers) and [customHttp.yml](customHttp.yml).
+* Web deployment is configured for Cloudflare Workers ([wrangler.toml](Bzeadstore-main/wrangler.toml), [deploy workflow](.github/workflows/deploy-cloudflare-worker.yml)).
+* Security headers are applied by [worker.js](Bzeadstore-main/worker.js).
 
 ---
 

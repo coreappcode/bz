@@ -2,28 +2,14 @@
 
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { loadEnv } from 'vite';
 
-async function loadLocalEnvIfNeeded() {
-  if (process.env.VITE_SUPABASE_URL && process.env.VITE_SUPABASE_ANON_KEY) return;
-
-  try {
-    const envPath = path.resolve(process.cwd(), '.env');
-    const raw = await readFile(envPath, 'utf8');
-    for (const line of raw.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const equalsIndex = trimmed.indexOf('=');
-      if (equalsIndex <= 0) continue;
-
-      const key = trimmed.slice(0, equalsIndex).trim();
-      const value = trimmed.slice(equalsIndex + 1).trim();
-      if (!key) continue;
-      if (process.env[key] == null || process.env[key] === '') {
-        process.env[key] = value;
-      }
+function loadLocalEnvIfNeeded() {
+  const env = loadEnv('production', process.cwd(), '');
+  for (const [key, value] of Object.entries(env)) {
+    if (process.env[key] == null || process.env[key] === '') {
+      process.env[key] = value;
     }
-  } catch {
-    // .env is optional here; fallback to process env and existing skip behavior.
   }
 }
 
@@ -52,7 +38,7 @@ function resolveImageUrl(product) {
   return `${SITE_URL}${image.startsWith('/') ? '' : '/'}${image}`;
 }
 
-/** og:image via Supabase edge function — resized JPEG, works for every product without Amplify routing. */
+/** og:image via Supabase edge function — resized JPEG, without host-specific proxy rules. */
 function resolveSocialImageUrl(slug, fallbackImageUrl) {
   const s = String(slug || '').trim();
   if (s && SUPABASE_URL) {
