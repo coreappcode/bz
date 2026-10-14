@@ -22,6 +22,8 @@ supabase/.temp/
 .env.local
 .env.production
 .env.*.local
+/keys.md
+/pending-products-hsn.csv
 /cred.md
 
 # Private keys & certificates
