@@ -141,7 +141,7 @@ const ISO3_TO_ISO2: Record<string, string> = {
   IDN: 'ID', PHL: 'PH', VNM: 'VN', ZAF: 'ZA', BRA: 'BR', MEX: 'MX',
   ARG: 'AR', CHL: 'CL', COL: 'CO', PER: 'PE', TUR: 'TR', ISR: 'IL',
   EGY: 'EG', NGA: 'NG', KEN: 'KE', GHA: 'GH', LKA: 'LK', BGD: 'BD',
-  PAK: 'PK', NPL: 'NP', MMR: 'MM', CHN: 'CN', HKG: 'HK', TWN: 'TW',
+  PAK: 'PK', NPL: 'NP', MDV: 'MV', MMR: 'MM', CHN: 'CN', HKG: 'HK', TWN: 'TW',
   RUS: 'RU', UKR: 'UA',
 };
 
@@ -186,6 +186,7 @@ const STRIPE_COUNTRY_FALLBACK_MAP: Record<string, string> = {
   japan: 'JP',
   singapore: 'SG',
   malaysia: 'MY',
+  maldives: 'MV',
   'south africa': 'ZA',
   brazil: 'BR',
   mexico: 'MX',
@@ -572,14 +573,10 @@ const CheckoutForm: React.FC<
   const [billingAddress, setBillingAddress] = useState<ShippingAddr>({ ...shippingAddress });
   const [sameAsShipping, setSameAsShipping] = useState(true);
 
-  // PaymentElement appearance — Stripe auto-renders only available methods.
-  // Hide Apple/Google Pay inside the Capacitor WebView (web Payment Request API
-  // is not wired up to native Google/Apple Pay; the buttons would be inert).
+  // The web checkout accepts cards only; wallet buttons are not offered.
   const paymentElementOptions: StripePaymentElementOptions = {
     layout: 'tabs',
-    ...(isNativePlatform
-      ? { wallets: { applePay: 'never', googlePay: 'never' } }
-      : {}),
+    wallets: { applePay: 'never', googlePay: 'never' },
   };
 
   // COD vs Stripe toggle
@@ -1822,7 +1819,8 @@ const Checkout: React.FC = () => {
   }, [checkoutData, liveQuote, liveQuoteLoading, liveQuoteError, paymentInitRetryToken]);
 
   // --- Derived values (computed before early returns so hooks below are always called) ---
-  const codEligible = checkoutData?.codEligible === true;
+  // Cash on Delivery is not offered by the web checkout.
+  const codEligible = false;
   const destCountryToken = (checkoutData?.shippingAddress?.country || '').trim().toUpperCase().replace(/\s+/g, '');
   const isInternational = Boolean(destCountryToken) && !['INDIA', 'IN', 'IND'].includes(destCountryToken);
   const minimumOrderNotMet = Boolean(
@@ -2058,7 +2056,7 @@ const Checkout: React.FC = () => {
   }
 
   if (initError) {
-    if (checkoutData.codEligible && !minimumOrderNotMet) {
+    if (codEligible && !minimumOrderNotMet) {
       // Keep rendering — CheckoutForm handles COD internally
     } else {
     return (

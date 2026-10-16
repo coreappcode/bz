@@ -169,12 +169,12 @@ Deno.serve(async (req: Request) => {
       },
     };
 
-    // A Capacitor WebView cannot reliably resume an off-site payment redirect.
-    // Card authentication, including 3DS, remains available; this excludes only
-    // payment methods that require a full browser redirect (for example UPI).
-    paymentIntentPayload.automatic_payment_methods = client === 'native'
-      ? { enabled: true, allow_redirects: 'never' }
-      : { enabled: true };
+    if (client === 'native') {
+      // A Capacitor WebView cannot reliably resume off-site payment redirects.
+      paymentIntentPayload.automatic_payment_methods = { enabled: true, allow_redirects: 'never' };
+    } else {
+      paymentIntentPayload.payment_method_types = ['card'];
+    }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentPayload);
 
