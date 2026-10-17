@@ -1662,7 +1662,11 @@ export async function calculateDestinationCheckoutPricing(input: {
   const commissionPct = 0;
   const platformHandlingCharge = roundTo2(payableBeforeCommission * commissionPct / 100);
   const total = roundTo2(payableBeforeCommission + platformHandlingCharge);
-  const codEligible = ineligibleItems.length === 0 && codIneligibleItems.length === 0 && lines.length > 0;
+  // Cash on Delivery is disabled web-wide (business decision).
+  // Flip COD_DISABLED to false to re-enable per-item eligibility.
+  const COD_DISABLED = true;
+  const codEligibleByItems = ineligibleItems.length === 0 && codIneligibleItems.length === 0 && lines.length > 0;
+  const codEligible = !COD_DISABLED && codEligibleByItems;
 
   let minimumOrderConstraint: MinimumOrderConstraint | undefined;
   const matchingRouteRules = checkoutMinOrderRules

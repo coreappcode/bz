@@ -248,10 +248,7 @@ const FooterImpl: React.FC = () => {
               <div className="bg-[#2D2D2D] rounded px-2.5 py-1.5 h-8 flex items-center">
                 <span className="text-[10px] font-semibold text-white whitespace-nowrap">NET BANKING</span>
               </div>
-              {/* Cash on Delivery */}
-              <div className="bg-[#2D2D2D] rounded px-2.5 py-1.5 h-8 flex items-center">
-                <span className="text-[10px] font-semibold text-white whitespace-nowrap">CASH ON DELIVERY</span>
-              </div>
+              {/* Cash on Delivery is disabled web-wide — chip intentionally removed */}
               {/* Easy EMI */}
               <div className="bg-[#2D2D2D] rounded px-2.5 py-1.5 h-8 flex items-center">
                 <span className="text-[10px] font-semibold text-white whitespace-nowrap">EASY EMI OPTIONS</span>

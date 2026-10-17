@@ -691,7 +691,8 @@ export async function createIntlShipmentFromOrder(
 
     if (svcResult.data) {
       const svcData = svcResult.data as Record<string, unknown>;
-      const innerData = (svcData.data || svcData) as Record<string, unknown>;
+      // Defensive unwrap: documented shape { payload: { data: ... } }, live shape { data: ... }.
+      const innerData = ((svcData.payload ?? svcData.data ?? svcData)) as Record<string, unknown>;
       const couriers = (innerData.available_courier_companies || []) as Array<Record<string, unknown>>;
       const validCouriers = couriers
         .filter((c) => !c.blocked)
@@ -1066,7 +1067,8 @@ export async function createDomesticShipmentFromOrder(
 
     if (svcResult.data) {
       const svcData = svcResult.data as Record<string, unknown>;
-      const innerData = (svcData.data || svcData) as Record<string, unknown>;
+      // Defensive unwrap: documented shape { payload: { data: ... } }, live shape { data: ... }.
+      const innerData = ((svcData.payload ?? svcData.data ?? svcData)) as Record<string, unknown>;
       const couriers = (innerData.available_courier_companies || []) as Array<Record<string, unknown>>;
       // Pick cheapest available
       const validCouriers = couriers

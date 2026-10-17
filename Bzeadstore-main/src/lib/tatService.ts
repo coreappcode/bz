@@ -173,7 +173,10 @@ export async function checkDeliveryServiceability(
     }
 
     const shiprocketRes = response.data as Record<string, unknown> | undefined;
-    const available = shiprocketRes?.data as any;
+    // Defensive unwrap: documented Shiprocket domestic shape is { payload: { data: ... } },
+    // observed live shape is flat { data: ... }. Handle both before reading the courier list.
+    const payload = (shiprocketRes as Record<string, unknown> | undefined)?.payload ?? shiprocketRes;
+    const available = ((payload as Record<string, unknown> | undefined)?.data ?? payload) as any;
     const serviceable = Boolean(
       available?.available_courier_companies?.length > 0
       || available?.recommended_courier_company_id
