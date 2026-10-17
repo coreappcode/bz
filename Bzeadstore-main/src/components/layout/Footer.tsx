@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Facebook, Instagram, Mail, Phone, MapPin, Loader2 } from 'lucide-react';
 import { isNativePlatform } from '../../mobile/nativePlatform';
 import { COMPANY_ADDRESS_LINES } from '../../constants/companyContact';
-import { triggerBuyerApkDownload } from '../../lib/appDownload';
+import { BUYER_APP_PLAY_STORE_URL } from '../../lib/appDownload';
 
 export const Footer: React.FC = () => {
   // The native (Capacitor) app shell has its own bottom nav and does not
@@ -17,21 +17,6 @@ const FooterImpl: React.FC = () => {
   const navigate = useNavigate();
   const [logoLoadError, setLogoLoadError] = useState(false);
   const [legalLoadingPath, setLegalLoadingPath] = useState<string | null>(null);
-  const [downloadingPlatform, setDownloadingPlatform] = useState<'android' | null>(null);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
-
-  const handleAppDownload = async () => {
-    setDownloadingPlatform('android');
-    setDownloadError(null);
-
-    try {
-      await triggerBuyerApkDownload();
-    } catch {
-      setDownloadError('Unable to start Android download right now. Please try again.');
-    } finally {
-      setDownloadingPlatform(null);
-    }
-  };
 
   const handleLegalNavigate = (path: string) => {
     setLegalLoadingPath(path);
@@ -142,22 +127,15 @@ const FooterImpl: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <button
-                  onClick={() => void handleAppDownload()}
-                  className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-70"
-                  disabled={downloadingPlatform !== null}
+                <a
+                  href={BUYER_APP_PLAY_STORE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 mt-2 px-4 py-2 bg-amber-500 text-white text-sm font-semibold rounded-xl hover:bg-amber-600 transition-colors"
                 >
-                  {downloadingPlatform === 'android' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : null}
-                  {downloadingPlatform === 'android' ? 'Downloading...' : 'Download Android App'}
-                </button>
+                  Download Android App
+                </a>
               </li>
-              {downloadError && (
-                <li>
-                  <p className="text-xs text-red-300 mt-1">{downloadError}</p>
-                </li>
-              )}
             </ul>
           </div>
 
