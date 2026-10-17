@@ -380,6 +380,48 @@ async function logOperation(
 
 // ─── Operation Handlers ────────────────────────────────────────
 
+/**
+ * Resolve the seller's effective domestic pickup pincode.
+ *
+ * Domestic orders are CREATED from the seller's Shiprocket pickup location
+ * (see handleCreateDomesticOrder: pickup location pin first, KYC pin only as
+ * fallback). Serviceability must be checked against the same origin, otherwise
+ * a seller whose KYC pin is stale/invalid is wrongly reported unserviceable
+ * for every destination.
+ *
+ * Service-role read — buyers cannot read seller_pickup_locations under RLS,
+ * so this resolution must happen server-side.
+ * Returns '' when no usable pickup location exists (caller falls back to its
+ * own pickup_postcode, i.e. the seller KYC pin).
+ */
+async function resolveSellerPickupPostcode(sellerId: string): Promise<string> {
+  try {
+    const url =
+      `${supabaseUrl()}/rest/v1/seller_pickup_locations` +
+      `?seller_id=eq.${encodeURIComponent(sellerId)}` +
+      `&select=pin_code,is_verified,shiprocket_status,updated_at` +
+      `&order=updated_at.desc`;
+    const response = await fetch(url, { headers: supabaseHeaders() });
+    if (!response.ok) return '';
+    const rows = (await response.json()) as Array<{
+      pin_code?: unknown;
+      is_verified?: unknown;
+      shiprocket_status?: unknown;
+    }>;
+    if (!Array.isArray(rows) || rows.length === 0) return '';
+    const isSixDigits = (v: unknown) => /^\d{6}$/.test(String(v ?? '').trim());
+    const verified = rows.find(
+      (r) => isSixDigits(r.pin_code) && (r.shiprocket_status === 1 || r.is_verified === true),
+    );
+    if (verified) return String(verified.pin_code).trim();
+    const anyValid = rows.find((r) => isSixDigits(r.pin_code));
+    return anyValid ? String(anyValid.pin_code).trim() : '';
+  } catch (e) {
+    console.error('resolveSellerPickupPostcode failed:', e);
+    return '';
+  }
+}
+
 async function handleCheckInternationalServiceability(
   sellerId: string,
   requestData: Record<string, unknown>,
@@ -428,7 +470,13 @@ async function handleCheckDomesticServiceability(
   sellerId: string,
   requestData: Record<string, unknown>,
 ): Promise<{ ok: boolean; data: unknown; error?: string }> {
-  const pickupPostcode = String(requestData.pickup_postcode || '').trim();
+  // Prefer the seller's Shiprocket-verified pickup location pincode — domestic
+  // orders are created from the pickup location, so serviceability must be
+  // checked against the same origin. Falls back to the caller-provided
+  // pickup_postcode (seller KYC pin) when no usable pickup location exists.
+  const clientPickup = String(requestData.pickup_postcode || '').trim();
+  const resolvedPickup = await resolveSellerPickupPostcode(sellerId);
+  const pickupPostcode = resolvedPickup || clientPickup;
   const deliveryPostcode = String(requestData.delivery_postcode || '').trim();
   const weight = Number(requestData.weight);
   const cod = requestData.cod ? 1 : 0;
@@ -449,14 +497,30 @@ async function handleCheckDomesticServiceability(
     `/v1/external/courier/serviceability/?${queryParams.toString()}`,
   );
 
+  // Shiprocket quirk: business errors (e.g. invalid pincode) can arrive as
+  // HTTP 200 with a body like { status: 404, message: "Invalid Pincode: X" }.
+  // Treat body-level errors as failures so logs and callers see the truth.
+  const bodyStatus = Number((result.data as Record<string, unknown> | undefined)?.status ?? 0);
+  const effectiveOk = result.ok && !(bodyStatus >= 400);
+
+  const effectiveRequest =
+    resolvedPickup && resolvedPickup !== clientPickup
+      ? { ...requestData, pickup_postcode: pickupPostcode, pickup_postcode_source: 'seller_pickup_locations' }
+      : requestData;
+
   await logOperation(
     sellerId, undefined, 'check_domestic_serviceability',
-    requestData, result.data, result.status, result.ok,
-    result.ok ? undefined : JSON.stringify(result.data),
+    effectiveRequest, result.data, effectiveOk ? result.status : (bodyStatus || result.status), effectiveOk,
+    effectiveOk ? undefined : JSON.stringify(result.data),
   );
 
-  if (!result.ok) {
-    return { ok: false, data: result.data, error: `Domestic serviceability check failed (HTTP ${result.status})` };
+  if (!effectiveOk) {
+    const srMessage = String((result.data as Record<string, unknown> | undefined)?.message || '').trim();
+    return {
+      ok: false,
+      data: result.data,
+      error: srMessage || `Domestic serviceability check failed (HTTP ${result.status})`,
+    };
   }
 
   return { ok: true, data: result.data };
