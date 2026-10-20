@@ -21,6 +21,22 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const pathname = url.pathname;
+    const hostname = url.hostname.toLowerCase();
+    const isGlobalHost = hostname === 'bzead.com' || hostname === 'www.bzead.com';
+    const isSellerPath = pathname === '/seller' || pathname.startsWith('/seller/');
+
+    if (
+      isGlobalHost &&
+      request.cf?.country === 'MV' &&
+      !isSellerPath &&
+      (request.method === 'GET' || request.method === 'HEAD')
+    ) {
+      const destination = new URL(url);
+      destination.protocol = 'https:';
+      destination.hostname = 'bzead.asia';
+      destination.port = '';
+      return Response.redirect(destination.toString(), 302);
+    }
 
     // Social preview image proxy — resized JPEG for WhatsApp/Facebook og:image
     const ogMatch = pathname.match(/^\/og-image\/(.+?)\/?$/);
