@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Parse request body
-    const { amount, currency, metadata, client } = await req.json();
+    const { amount, currency, metadata } = await req.json();
 
     // 4. Require authenticated user — verify JWT cryptographically via Supabase
     const authHeader = req.headers.get("Authorization");
@@ -169,12 +169,7 @@ Deno.serve(async (req: Request) => {
       },
     };
 
-    if (client === 'native') {
-      // A Capacitor WebView cannot reliably resume off-site payment redirects.
-      paymentIntentPayload.automatic_payment_methods = { enabled: true, allow_redirects: 'never' };
-    } else {
-      paymentIntentPayload.payment_method_types = ['card'];
-    }
+    paymentIntentPayload.payment_method_types = ['card'];
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentPayload);
 

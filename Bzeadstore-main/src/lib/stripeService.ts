@@ -7,7 +7,6 @@
 
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
-import { isNativePlatform } from '../mobile/nativePlatform';
 
 // Singleton Stripe instance
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -77,13 +76,7 @@ const extractFunctionErrorMessage = async (error: any): Promise<string> => {
 export async function createPaymentIntent(
   params: CreatePaymentIntentParams
 ): Promise<PaymentIntentResult> {
-  // Tag the request so the edge function can disable redirect-based payment methods
-  // when called from inside the Capacitor WebView (where Stripe's off-site redirect
-  // would land on https://localhost and never return to the app).
-  const requestBody = {
-    ...params,
-    client: isNativePlatform ? 'native' : 'web',
-  };
+  const requestBody = { ...params };
 
   if (import.meta.env.DEV) {
     // Development: use Vite dev middleware
