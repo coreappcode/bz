@@ -1,6 +1,13 @@
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
   'https://bzead.com',
+  'https://www.bzead.in',
+  'https://bzead.in',
+  'https://bzead.asia',
+  'https://www.bzead.asia',
+  'https://bzead.uk',
+  'https://www.bzead.uk',
+  'https://main.dodpm249jwwgd.amplifyapp.com',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -9,6 +16,9 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://api.opencagedata.com/geocode/v1/json',
+  'https://bzead.eu',
+  'https://www.bzead.eu',
 ];
 
 function getCorsHeaders(req?: Request) {

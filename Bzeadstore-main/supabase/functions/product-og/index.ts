@@ -5,11 +5,12 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-const SITE_URL = 'https://www.bzead.com';
+const DEFAULT_SITE_URL = 'https://www.bzead.com';
 
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
   'https://bzead.com',
+  'https://www.bzead.in',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -18,29 +19,40 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://',
+  'https://bzead.asia',
+  'https://bzead.eu',
+  'https://bzead.in',
+  'https://bzead.uk',
+  'https://deno.land/std@0.168.0/http/server.ts',
+  'https://esm.sh/@supabase/supabase-js@2.39.3',
+  'https://www.bzead.asia',
+  'https://www.bzead.eu',
+  'https://www.bzead.uk',
 ];
 
 /* ---------- index.html cache for SSR mode ---------- */
-let cachedIndexHtml = '';
-let cacheTimestamp = 0;
+const cachedIndexHtmlBySite = new Map<string, { html: string; cachedAt: number }>();
 const INDEX_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
-async function getIndexHtml(): Promise<string> {
+async function getIndexHtml(siteUrl: string): Promise<string> {
   const now = Date.now();
-  if (cachedIndexHtml && (now - cacheTimestamp) < INDEX_CACHE_TTL) {
-    return cachedIndexHtml;
+  const cached = cachedIndexHtmlBySite.get(siteUrl);
+  if (cached && (now - cached.cachedAt) < INDEX_CACHE_TTL) {
+    return cached.html;
   }
   // Fetch the SPA shell from the site's static origin.
-  const res = await fetch(`${SITE_URL}/index.html`);
+  const res = await fetch(`${siteUrl}/index.html`);
   if (!res.ok) throw new Error(`Failed to fetch index.html: ${res.status}`);
-  cachedIndexHtml = await res.text();
-  cacheTimestamp = now;
-  return cachedIndexHtml;
+  const html = await res.text();
+  cachedIndexHtmlBySite.set(siteUrl, { html, cachedAt: now });
+  return html;
 }
 
 serve(async (req) => {
   const origin = req.headers.get('origin') || '';
   const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  const siteUrl = origin === 'https://www.bzead.in' ? origin : DEFAULT_SITE_URL;
   const corsHeaders = {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
@@ -82,20 +94,20 @@ serve(async (req) => {
 
     /* -------- SSR mode: inject OG tags into the SPA shell -------- */
     if (mode === 'ssr') {
-      return await handleSsr(p, slug, corsHeaders);
+      return await handleSsr(p, slug, corsHeaders, siteUrl);
     }
 
     const resolvedSlug = p?.slug || slug;
-    const productUrl = `${SITE_URL}/products/${resolvedSlug}`;
+    const productUrl = `${siteUrl}/products/${resolvedSlug}`;
 
     /* -------- Share mode: standalone OG HTML + meta-refresh redirect -------- */
     if (!p) {
       const html = buildShareHtml({
         title: 'BZEAD - Premium Global Marketplace',
         description: 'Discover premium products from verified sellers worldwide.',
-        image: `${SITE_URL}/images/logo/bzead-logo.png`,
-        ogUrl: `${SITE_URL}`,
-        redirectUrl: `${SITE_URL}`,
+        image: `${siteUrl}/images/logo/bzead-logo.png`,
+        ogUrl: `${siteUrl}`,
+        redirectUrl: `${siteUrl}`,
         price: '',
         currency: '',
         brand: '',
@@ -110,10 +122,10 @@ serve(async (req) => {
       });
     }
 
-    const shareUrl = `${SITE_URL}/share/${resolvedSlug}`;
+    const shareUrl = `${siteUrl}/share/${resolvedSlug}`;
     const title = p.name || 'BZEAD Product';
     const description = (p.short_description || p.description || '').slice(0, 200);
-    const imageUrl = resolveSocialImageUrl(resolvedSlug, resolveImageUrl(p.image_url, p.images));
+    const imageUrl = resolveSocialImageUrl(resolvedSlug, resolveImageUrl(p.image_url, p.images, siteUrl), siteUrl);
 
     const html = buildShareHtml({
       title,
@@ -145,17 +157,20 @@ async function handleSsr(
   p: any | null,
   slug: string,
   corsHeaders: Record<string, string>,
+  siteUrl: string,
 ): Promise<Response> {
   let indexHtml: string;
   try {
-    indexHtml = await getIndexHtml();
+    indexHtml = await getIndexHtml(siteUrl);
   } catch {
     // If we can't fetch index.html, fall back to share-mode HTML
-    const productUrl = p ? `${SITE_URL}/products/${p.slug || slug}` : SITE_URL;
+    const productUrl = p ? `${siteUrl}/products/${p.slug || slug}` : siteUrl;
     const html = buildShareHtml({
       title: p?.name || 'BZEAD - Premium Global Marketplace',
       description: p ? (p.short_description || p.description || '').slice(0, 200) : 'Discover premium products from verified sellers worldwide.',
-      image: p ? resolveSocialImageUrl(p.slug || slug, resolveImageUrl(p.image_url, p.images)) : `${SITE_URL}/images/logo/bzead-logo.png`,
+      image: p
+        ? resolveSocialImageUrl(p.slug || slug, resolveImageUrl(p.image_url, p.images, siteUrl), siteUrl)
+        : `${siteUrl}/images/logo/bzead-logo.png`,
       ogUrl: productUrl,
       redirectUrl: productUrl,
       price: p ? String(p.price) : '',
@@ -179,8 +194,8 @@ async function handleSsr(
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const title = p.name || 'BZEAD Product';
   const description = (p.short_description || p.description || '').slice(0, 200) || title;
-  const imageUrl = resolveSocialImageUrl(p.slug || slug, resolveImageUrl(p.image_url, p.images));
-  const productUrl = `${SITE_URL}/products/${p.slug || slug}`;
+  const imageUrl = resolveSocialImageUrl(p.slug || slug, resolveImageUrl(p.image_url, p.images, siteUrl), siteUrl);
+  const productUrl = `${siteUrl}/products/${p.slug || slug}`;
 
   const ogBlock = `
   <!-- Injected OG meta tags -->
@@ -234,13 +249,13 @@ function inferImageMime(url: string): string {
 }
 
 /** Use the Supabase edge function URL directly for social previews instead of a host proxy. */
-function resolveSocialImageUrl(slug: string, fallbackImageUrl: string): string {
+function resolveSocialImageUrl(slug: string, fallbackImageUrl: string, siteUrl: string): string {
   const s = String(slug || '').trim();
   if (s && SUPABASE_URL) {
     const base = SUPABASE_URL.replace(/\/+$/, '');
     return `${base}/functions/v1/product-og-image?slug=${encodeURIComponent(s)}`;
   }
-  return fallbackImageUrl || `${SITE_URL}/images/logo/bzead-logo.png`;
+  return fallbackImageUrl || `${siteUrl}/images/logo/bzead-logo.png`;
 }
 
 function ogImageMeta(imageUrl: string, esc: (s: string) => string): string {
@@ -250,12 +265,12 @@ function ogImageMeta(imageUrl: string, esc: (s: string) => string): string {
   return `${secure}<meta property="og:image:type" content="${inferImageMime(imageUrl)}" />`;
 }
 
-function resolveImageUrl(imageUrl: string | null, images: string[] | null): string {
+function resolveImageUrl(imageUrl: string | null, images: string[] | null, siteUrl: string): string {
   const img = imageUrl || (images && images.length > 0 ? images[0] : '');
-  if (!img) return `${SITE_URL}/images/logo/bzead-logo.png`;
+  if (!img) return `${siteUrl}/images/logo/bzead-logo.png`;
   // If it's already an absolute URL, use as-is
   if (img.startsWith('http')) return img;
-  return `${SITE_URL}${img.startsWith('/') ? '' : '/'}${img}`;
+  return `${siteUrl}${img.startsWith('/') ? '' : '/'}${img}`;
 }
 
 interface OgData {

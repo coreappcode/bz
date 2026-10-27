@@ -1,1 +1,0 @@
-import{ag as n}from"./index-CZHMqHc7.js";import"./react-vendor-SWnM-tZ8.js";import"./ui-vendor-EsOy7tUD.js";class o extends n{async alert(e){window.alert(e.message)}async prompt(e){const a=window.prompt(e.message,e.inputText||"");return{value:a!==null?a:"",cancelled:a===null}}async confirm(e){return{value:window.confirm(e.message)}}}export{o as DialogWeb};

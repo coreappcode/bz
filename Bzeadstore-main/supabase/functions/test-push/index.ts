@@ -27,6 +27,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
   'https://bzead.com',
+  'https://www.bzead.in',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -34,6 +35,14 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://api.onesignal.com/notifications',
+  'https://bzead.asia',
+  'https://bzead.eu',
+  'https://bzead.in',
+  'https://bzead.uk',
+  'https://www.bzead.asia',
+  'https://www.bzead.eu',
+  'https://www.bzead.uk',
 ];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

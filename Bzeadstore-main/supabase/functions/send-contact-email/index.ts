@@ -8,6 +8,7 @@ declare const Deno: {
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
   'https://bzead.com',
+  'https://www.bzead.in',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -16,6 +17,14 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://api.resend.com/emails',
+  'https://bzead.asia',
+  'https://bzead.eu',
+  'https://bzead.in',
+  'https://bzead.uk',
+  'https://www.bzead.asia',
+  'https://www.bzead.eu',
+  'https://www.bzead.uk',
 ];
 
 function getCorsHeaders(req?: Request) {

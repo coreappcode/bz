@@ -10,8 +10,16 @@
 import Stripe from "https://esm.sh/stripe@14.14.0?target=deno";
 
 const ALLOWED_ORIGINS = [
+  'https://bzead.asia',
+  'https://www.bzead.asia',
+  'https://main.dodpm249jwwgd.amplifyapp.com',
   'https://www.bzead.com',
+  'https://www.bzead.in',
   'https://bzead.com',
+  'https://bzead.in',
+  'https://www.bzead.in',
+  'https://bzead.uk',
+  'https://www.bzead.uk',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -20,6 +28,8 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://bzead.eu',
+  'https://www.bzead.eu',
 ];
 
 function getCorsHeaders(req: Request) {
@@ -63,7 +73,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // 3. Parse request body
-    const { amount, currency, metadata } = await req.json();
+    const { amount, currency, metadata, client } = await req.json();
 
     // 4. Require authenticated user — verify JWT cryptographically via Supabase
     const authHeader = req.headers.get("Authorization");
@@ -169,7 +179,12 @@ Deno.serve(async (req: Request) => {
       },
     };
 
-    paymentIntentPayload.payment_method_types = ['card'];
+    if (client === 'native') {
+      // A Capacitor WebView cannot reliably resume off-site payment redirects.
+      paymentIntentPayload.automatic_payment_methods = { enabled: true, allow_redirects: 'never' };
+    } else {
+      paymentIntentPayload.payment_method_types = ['card'];
+    }
 
     const paymentIntent = await stripe.paymentIntents.create(paymentIntentPayload);
 

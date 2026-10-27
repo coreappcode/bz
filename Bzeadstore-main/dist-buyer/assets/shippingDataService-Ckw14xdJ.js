@@ -1,0 +1,1 @@
+import{s as o}from"./index-TCfYKujg.js";async function a(){const{data:e,error:r}=await o.from("countries").select("id, country_name, country_code, short_code, currency_code, dialing_code, is_active").eq("is_active",!0).order("country_name");return{data:e||[],error:r?.message||null}}export{a as f};

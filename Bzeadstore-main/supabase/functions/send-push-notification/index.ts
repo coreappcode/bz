@@ -29,6 +29,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 const ALLOWED_ORIGINS = [
   'https://www.bzead.com',
   'https://bzead.com',
+  'https://www.bzead.in',
+  'https://bzead.in',
+  'https://bzead.asia',
+  'https://www.bzead.asia',
+  'https://bzead.uk',
+  'https://www.bzead.uk',
+  'https://main.dodpm249jwwgd.amplifyapp.com',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'http://localhost:4173',
@@ -37,6 +44,11 @@ const ALLOWED_ORIGINS = [
   'https://localhost',
   'capacitor://localhost',
   'ionic://localhost',
+  'https://api.onesignal.com/notifications',
+  'https://bzead.eu',
+  'https://oauth2.googleapis.com/token',
+  'https://www.bzead.eu',
+  'https://www.googleapis.com/auth/firebase.messaging',
 ];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
